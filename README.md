@@ -4,7 +4,7 @@ Transform any GitHub repository into an AI-powered chatbot. Ask questions, explo
 
 ## What is RepoChat?
 
-Stop struggling to understand unfamiliar codebases. RepoChat uses AI and semantic search to answer questions about any GitHub repository - instantly.
+Stop struggling to understand unfamiliar codebases. RepoChat uses RAG and semantic search to answer questions about any GitHub repository - instantly.
 
 ### The Problem
 - Onboarding to new projects takes days
