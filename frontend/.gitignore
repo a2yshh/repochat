@@ -7,3 +7,5 @@ frontend/.next
 frontend/.env.local
 backend/.env.example
 frontend/.env.example
+sql
+frontend/venv
