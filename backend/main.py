@@ -1,7 +1,9 @@
+import os
 import uuid
 import asyncio
 import re
 import logging
+import tempfile
 from typing import Dict, Optional
 
 from fastapi import FastAPI, HTTPException
@@ -148,7 +150,6 @@ async def process_repo(request: ProcessRepoRequest):
         "files_processed": 0
     }
 
-    # 🔥 BACKGROUND TASK
     asyncio.create_task(process_repo_background(session_id, github_url))
 
     return {
@@ -248,3 +249,193 @@ async def get_conversation(conversation_id: str):
 async def delete_conversation_endpoint(conversation_id: str):
     await asyncio.to_thread(delete_conversation, conversation_id)
     return {"status": "deleted"}
+
+import shutil
+from fastapi.responses import FileResponse
+from services.code_editor import (
+    analyze_modification_intent,
+    generate_code_changes,
+    apply_modifications,
+    create_patch_file,
+    create_zip_archive
+)
+
+# Add to existing imports
+from typing import Optional
+
+# New request model
+class CodeModificationRequest(BaseModel):
+    session_id: str
+    modification_query: str
+    conversation_id: Optional[str] = None
+
+# Store modification sessions (in production, use database)
+modification_sessions: Dict[str, dict] = {}
+
+@app.post("/api/modify-code")
+async def modify_code(request: CodeModificationRequest):
+    """
+    Analyze code modification request and generate changes.
+    """
+    session_id = request.session_id
+    query = request.modification_query.strip()
+    
+    if session_id not in sessions or sessions[session_id]["status"] != "ready":
+        raise HTTPException(status_code=404, detail="Session not found or not ready")
+    
+    logger.info(f"Code modification request - Session: {session_id}, Query: {query}")
+    
+    try:
+        # Get collection and search for relevant files
+        collection = get_collection(session_id)
+        context_chunks = await asyncio.to_thread(search, collection, query, 10)
+        
+        logger.info(f"Found {len(context_chunks)} relevant code chunks")
+        
+        # Analyze modification intent
+        intent_analysis = await analyze_modification_intent(query, context_chunks)
+        
+        logger.info(f"Intent analysis: {intent_analysis}")
+        
+        # Get original repo path (reconstruct from session)
+        repo_url = sessions[session_id]["repo_url"]
+        
+        # Clone repo again for modification (fresh copy)
+        repo_path = await asyncio.to_thread(clone_repo, repo_url)
+        
+        # Generate modifications for each target file
+        modifications = []
+        
+        for idx, target_file in enumerate(intent_analysis['target_files'][:2]):  # Limit to 2 files to avoid rate limits
+            # Add delay between API calls to avoid hitting rate limits
+            if idx > 0:
+                await asyncio.sleep(2)
+                
+            # Find this file in context chunks
+            file_chunks = [c for c in context_chunks if target_file in c['file_path']]
+            
+            if not file_chunks:
+                continue
+            
+            # Read original file content
+            file_full_path = os.path.join(repo_path, target_file)
+            
+            if not os.path.exists(file_full_path):
+                continue
+            
+            with open(file_full_path, 'r', encoding='utf-8') as f:
+                original_content = f.read()
+            
+            # Generate modified code
+            modified_content = await generate_code_changes(
+                file_path=target_file,
+                file_content=original_content,
+                modification_request=query,
+                file_context=file_chunks
+            )
+            
+            modifications.append({
+                "file_path": target_file,
+                "original_content": original_content,
+                "modified_content": modified_content
+            })
+        
+        if not modifications:
+            raise HTTPException(status_code=400, detail="No files could be modified")
+        
+        # Apply modifications
+        result = await asyncio.to_thread(
+            apply_modifications,
+            repo_path,
+            modifications,
+            session_id
+        )
+        
+        # Create modification session
+        mod_session_id = str(uuid.uuid4()).replace("-", "")[:16]
+        
+        # Create patch file
+        patch_path = os.path.join(tempfile.gettempdir(), f"{mod_session_id}.patch")
+        create_patch_file(result['diffs'], patch_path)
+        
+        # Create zip of modified repo
+        zip_path = os.path.join(tempfile.gettempdir(), f"{mod_session_id}_modified.zip")
+        create_zip_archive(result['modified_repo_path'], zip_path)
+        
+        # Store modification session
+        modification_sessions[mod_session_id] = {
+            "original_repo_path": repo_path,
+            "modified_repo_path": result['modified_repo_path'],
+            "patch_path": patch_path,
+            "zip_path": zip_path,
+            "diffs": result['diffs'],
+            "summary": result['summary'],
+            "files_changed": result['files_changed'],
+            "created_at": asyncio.get_event_loop().time()
+        }
+        
+        logger.info(f"Modification session created: {mod_session_id}")
+        
+        return {
+            "modification_id": mod_session_id,
+            "summary": result['summary'],
+            "files_changed": result['files_changed'],
+            "diffs": result['diffs'],
+            "intent_analysis": intent_analysis
+        }
+        
+    except Exception as e:
+        logger.error(f"Error in code modification: {e}", exc_info=True)
+        raise HTTPException(status_code=500, detail=f"Code modification failed: {str(e)}")
+
+
+@app.get("/api/download-patch/{modification_id}")
+async def download_patch(modification_id: str):
+    """
+    Download patch file for code modifications.
+    """
+    if modification_id not in modification_sessions:
+        raise HTTPException(status_code=404, detail="Modification session not found")
+    
+    patch_path = modification_sessions[modification_id]['patch_path']
+    
+    return FileResponse(
+        path=patch_path,
+        filename=f"repochat_changes_{modification_id}.patch",
+        media_type="text/plain"
+    )
+
+
+@app.get("/api/download-modified-repo/{modification_id}")
+async def download_modified_repo(modification_id: str):
+    """
+    Download zip archive of modified repository.
+    """
+    if modification_id not in modification_sessions:
+        raise HTTPException(status_code=404, detail="Modification session not found")
+    
+    zip_path = modification_sessions[modification_id]['zip_path']
+    
+    return FileResponse(
+        path=zip_path,
+        filename=f"repochat_modified_{modification_id}.zip",
+        media_type="application/zip"
+    )
+
+
+@app.get("/api/modification-status/{modification_id}")
+def get_modification_status(modification_id: str):
+    """
+    Get details of a modification session.
+    """
+    if modification_id not in modification_sessions:
+        raise HTTPException(status_code=404, detail="Modification session not found")
+    
+    session = modification_sessions[modification_id]
+    
+    return {
+        "modification_id": modification_id,
+        "summary": session['summary'],
+        "files_changed": session['files_changed'],
+        "diffs": session['diffs']
+    }

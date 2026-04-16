@@ -27,29 +27,32 @@ export default function LoadingState({ status }: LoadingStateProps) {
   const currentIndex = STEPS.findIndex((s) => s.key === status);
 
   return (
-    <div className="flex flex-col items-center justify-center min-h-[60vh] px-4">
-      <div className="w-full max-w-md space-y-4">
-        <h2 className="text-xl font-semibold text-white text-center mb-6">
+    <div className="flex min-h-[60vh] flex-col items-center justify-center px-4">
+      <div className="w-full max-w-xl rounded-3xl border border-white/10 bg-white/5 p-8 shadow-2xl backdrop-blur-xl">
+        <h2 className="mb-2 text-center text-2xl font-semibold text-white">
           Setting up your repo
         </h2>
+        <p className="mb-8 text-center text-sm text-slate-400">
+          RepoChat is cloning, indexing, and preparing the repository for chat.
+        </p>
 
         {STEPS.map((step, i) => {
           const isDone = i < currentIndex || status === "ready";
           const isCurrent = step.key === status && status !== "ready";
 
           return (
-            <div key={step.key} className="flex items-center gap-3">
+            <div key={step.key} className="flex items-center gap-3 py-2">
               <div
-                className={`w-6 h-6 rounded-full flex items-center justify-center text-sm
-                  ${isDone ? "bg-green-500 text-white" : ""}
-                  ${isCurrent ? "bg-blue-500 text-white animate-pulse" : ""}
-                  ${!isDone && !isCurrent ? "bg-gray-700 text-gray-500" : ""}
+                className={`flex h-8 w-8 items-center justify-center rounded-full text-sm
+                  ${isDone ? "bg-emerald-500 text-white" : ""}
+                  ${isCurrent ? "animate-pulse bg-blue-500 text-white" : ""}
+                  ${!isDone && !isCurrent ? "bg-slate-800 text-slate-500" : ""}
                 `}
               >
                 {isDone ? "\u2713" : i + 1}
               </div>
               <span
-                className={`${isDone ? "text-green-400" : ""} ${isCurrent ? "text-white" : ""} ${!isDone && !isCurrent ? "text-gray-600" : ""}`}
+                className={`${isDone ? "text-emerald-400" : ""} ${isCurrent ? "text-white" : ""} ${!isDone && !isCurrent ? "text-slate-500" : ""}`}
               >
                 {step.label}
                 {isCurrent ? dots : ""}

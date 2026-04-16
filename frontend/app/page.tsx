@@ -14,6 +14,7 @@ interface Message {
   content: string;
   sources?: string[];
   timestamp?: string;
+  sessionId?: string;
 }
 
 interface Conversation {
@@ -113,6 +114,7 @@ export default function Home() {
       role: "user",
       content: message,
       timestamp: new Date().toISOString(),
+      sessionId: sessionId,
     };
 
     setMessages((prev) => [...prev, userMsg]);
@@ -160,7 +162,7 @@ export default function Home() {
 
       setMessages((prev) => [
         ...prev,
-        { role: "assistant", content: "", timestamp: new Date().toISOString() },
+        { role: "assistant", content: "", timestamp: new Date().toISOString(), sessionId: sessionId },
       ]);
 
       while (true) {
@@ -188,6 +190,7 @@ export default function Home() {
             content: displayText,
             sources,
             timestamp: new Date().toISOString(),
+            sessionId: sessionId,
           };
           return updated;
         });
@@ -209,6 +212,7 @@ export default function Home() {
           role: "assistant",
           content: msg,
           timestamp: new Date().toISOString(),
+          sessionId: sessionId,
         },
       ]);
     } finally {
@@ -277,6 +281,7 @@ export default function Home() {
             onSendMessage={handleSendMessage}
             isLoading={isSending}
             repoUrl={repoUrl}
+            sessionId={sessionId}
           />
         )}
       </div>

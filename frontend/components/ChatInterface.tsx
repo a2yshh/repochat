@@ -2,11 +2,14 @@
 
 import { useState, useRef, useEffect } from "react";
 import ReactMarkdown from "react-markdown";
+import CodeModificationPanel from "./CodeModificationPanel";
 
 interface Message {
   role: "user" | "assistant";
   content: string;
   sources?: string[];
+  timestamp?: string;
+  sessionId?: string;
 }
 
 interface ChatInterfaceProps {
@@ -14,6 +17,7 @@ interface ChatInterfaceProps {
   onSendMessage: (message: string) => void;
   isLoading: boolean;
   repoUrl: string;
+  sessionId : string;
 }
 
 export default function ChatInterface({
@@ -21,6 +25,7 @@ export default function ChatInterface({
   onSendMessage,
   isLoading,
   repoUrl,
+  sessionId,
 }: ChatInterfaceProps) {
   const [input, setInput] = useState("");
   const messagesEndRef = useRef<HTMLDivElement>(null);
@@ -39,24 +44,25 @@ export default function ChatInterface({
   const repoName = repoUrl.replace("https://github.com/", "");
 
   return (
-    <div className="flex flex-col h-[calc(100vh-2rem)] max-w-4xl mx-auto">
-      <div className="flex items-center justify-between px-4 py-3 border-b border-gray-700">
+    <div className="mx-auto flex h-[calc(100vh-2rem)] w-full max-w-5xl flex-col overflow-hidden rounded-3xl border border-white/10 bg-slate-950/45 shadow-2xl backdrop-blur-xl">
+      <div className="flex items-center justify-between border-b border-white/10 px-5 py-4">
         <div>
-          <h1 className="text-lg font-semibold text-white">RepoChat</h1>
-          <p className="text-sm text-gray-400">{repoName}</p>
+          <h1 className="text-lg font-semibold text-white">RepoChat Workspace</h1>
+          <p className="text-sm text-slate-400">{repoName}</p>
         </div>
       </div>
 
-      {/* Messages */}
-      <div className="flex-1 overflow-y-auto px-4 py-4 space-y-4">
+      <div className="flex-1 overflow-y-auto px-5 py-5 space-y-4">
         {messages.length === 0 && (
-          <div className="text-center text-gray-500 mt-20">
-            <p className="text-lg">Ask anything about this repository</p>
-            <p className="text-sm mt-2">
+          <div className="mt-20 text-center text-slate-500">
+            <p className="text-lg text-white">Ask anything about this repository</p>
+            <p className="mt-2 text-sm">
               Try: &quot;What does this project do?&quot; or &quot;How is authentication handled?&quot;
             </p>
           </div>
         )}
+
+
 
         {messages.map((msg, i) => (
           <div
@@ -64,10 +70,10 @@ export default function ChatInterface({
             className={`flex ${msg.role === "user" ? "justify-end" : "justify-start"}`}
           >
             <div
-              className={`max-w-[85%] rounded-lg px-5 py-4 ${
+              className={`max-w-[85%] rounded-2xl px-5 py-4 shadow-lg ${
                 msg.role === "user"
-                  ? "bg-blue-600 text-white"
-                  : "bg-gray-800 text-gray-100"
+                  ? "bg-gradient-to-r from-blue-600 to-cyan-500 text-white"
+                  : "border border-white/10 bg-white/5 text-gray-100"
               }`}
             >
               {msg.role === "assistant" ? (
@@ -94,7 +100,7 @@ export default function ChatInterface({
                     {msg.sources.map((src, j) => (
                       <span
                         key={j}
-                        className="text-xs bg-gray-700/70 text-blue-300 px-2.5 py-1 rounded-md font-mono"
+                    className="rounded-md bg-slate-800/90 px-2.5 py-1 font-mono text-xs text-blue-300"
                       >
                         {src}
                       </span>
@@ -108,7 +114,7 @@ export default function ChatInterface({
 
         {isLoading && (
           <div className="flex justify-start">
-            <div className="bg-gray-800 rounded-lg px-4 py-3 text-gray-400">
+            <div className="rounded-2xl border border-white/10 bg-white/5 px-4 py-3 text-slate-400">
               <div className="flex gap-1">
                 <span className="animate-bounce">.</span>
                 <span className="animate-bounce" style={{ animationDelay: "0.1s" }}>.</span>
@@ -118,13 +124,13 @@ export default function ChatInterface({
           </div>
         )}
 
+
         <div ref={messagesEndRef} />
       </div>
 
-      {/* Input */}
       <form
         onSubmit={handleSubmit}
-        className="px-4 py-3 border-t border-gray-700"
+        className="border-t border-white/10 px-5 py-4"
       >
         <div className="flex gap-3">
           <input
@@ -133,14 +139,14 @@ export default function ChatInterface({
             onChange={(e) => setInput(e.target.value)}
             placeholder="Ask about the codebase..."
             disabled={isLoading}
-            className="flex-1 px-4 py-3 bg-gray-800 border border-gray-700 rounded-lg
+            className="flex-1 rounded-2xl border border-white/10 bg-slate-950/80 px-4 py-3
               text-white placeholder-gray-500 focus:outline-none focus:ring-2
               focus:ring-blue-500 focus:border-transparent disabled:opacity-50"
           />
           <button
             type="submit"
             disabled={isLoading || !input.trim()}
-            className="px-6 py-3 bg-blue-600 text-white rounded-lg font-medium
+            className="rounded-2xl bg-gradient-to-r from-blue-600 to-cyan-500 px-6 py-3 font-medium text-white
               hover:bg-blue-700 focus:outline-none focus:ring-2 focus:ring-blue-500
               disabled:opacity-50 disabled:cursor-not-allowed transition-colors"
           >
@@ -148,6 +154,10 @@ export default function ChatInterface({
           </button>
         </div>
       </form>
+
+      <div className="border-t border-white/10 px-5 py-4">
+        <CodeModificationPanel sessionId={sessionId} />
+      </div>
     </div>
   );
 }
