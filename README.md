@@ -122,7 +122,14 @@ Bot:  Authentication uses JWT tokens. On login, credentials are verified
 └─────────────────────┴────────────────────────────────────────────────┘
 ```
 
-> Add real screenshots here after running the project: `docs/screenshots/`
+> Add real screenshots here after running the project:
+> <img width="1908" height="902" alt="Screenshot 2026-04-17 015159" src="https://github.com/user-attachments/assets/5bbc06a6-d157-48fc-93df-829a401e7b0f" />
+
+> **VIDEO LINK** :
+>
+> https://github.com/user-attachments/assets/9d1f6c4d-1548-4583-a71c-602e9c88b0d3
+
+
 
 ---
 
