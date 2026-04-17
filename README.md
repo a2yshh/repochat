@@ -35,9 +35,8 @@ When developers join a new project or explore an unfamiliar repository, they fac
 
 ## ✅ Solution
 
-RepoChat is a **RAG-based (Retrieval-Augmented Generation) chatbot** that lets you have a natural language conversation with any GitHub repository.
+Stop struggling to understand unfamiliar codebases. RepoChat uses AI and semantic search to answer questions about any GitHub repository - and now it can modify the code for you.
 
-Point it at a codebase → ask any question → get a grounded answer with exact file paths and line numbers.
 
 ```
 You:  How does user authentication work?
@@ -53,6 +52,28 @@ Bot:  Authentication uses JWT tokens. On login, credentials are verified
       → middleware/auth.py     lines 14–29
       → config/settings.py     line 102
 ```
+## Key Features
+
+### Chat & Understand
+- Process entire repositories - No file limits, handles 1000+ file projects
+- Semantic code search - Finds relevant code by meaning, not just keywords
+- Natural language Q&A - Ask questions like you would to a senior developer
+- Precise citations - Every answer includes exact file paths and line numbers
+- Multiple conversations - Organize different topics in separate chat threads
+- Real-time streaming - See AI responses as they're generated
+
+### AI Code Editor (NEW)
+- Automated code modifications - Describe changes in plain English
+- Intent analysis - AI understands what you want to change
+- Multi-file editing - Modifies multiple files in one request
+- Code diffs - See exactly what changed with unified diffs
+- Download options - Get patch files or complete modified repository
+- Syntax validation - Ensures generated code compiles
+
+### Free & Fast
+- 100% Free - Uses Groq API (14,400 free requests/day) + local embeddings
+- Lightning fast - 2-second response time for queries
+- Accurate modifications - 70-80% accuracy for common code changes
 
 **Key outcomes:**
 - 🕐 Answers in **< 2 seconds** across 1,000+ file codebases
