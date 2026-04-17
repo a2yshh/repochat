@@ -2,10 +2,14 @@
 
 import { useState, useEffect } from "react";
 import axios from "axios";
+import { useAuth } from "@/contexts/AuthContext";
+import SignIn from "@/components/SignIn";
+import SignUp from "@/components/SignUp";
 import Sidebar from "@/components/Sidebar";
 import RepoInput from "@/components/RepoInput";
 import ChatInterface from "@/components/ChatInterface";
 import LoadingState from "@/components/LoadingState";
+import { LogOut } from "lucide-react";
 
 const API_URL = "http://127.0.0.1:8000";
 
@@ -26,6 +30,8 @@ interface Conversation {
 }
 
 export default function Home() {
+  const { isAuthenticated, isLoading: authLoading, signOut, user } = useAuth();
+  const [showSignUp, setShowSignUp] = useState(false);
   const [repoUrl, setRepoUrl] = useState("");
   const [sessionId, setSessionId] = useState<string | null>(null);
   const [conversationId, setConversationId] = useState<string | null>(null);
@@ -246,6 +252,33 @@ export default function Home() {
     setError("");
   };
 
+  const handleSignOut = () => {
+    signOut();
+    handleBackToRepoSelection();
+  };
+
+  // Show loading state while checking authentication
+  if (authLoading) {
+    return (
+      <div className="w-full h-screen flex items-center justify-center bg-gradient-to-br from-slate-950 via-blue-950 to-slate-950">
+        <div className="text-center space-y-4">
+          <div className="w-12 h-12 rounded-full border-4 border-slate-600 border-t-blue-400 animate-spin mx-auto"></div>
+          <p className="text-slate-400">Loading...</p>
+        </div>
+      </div>
+    );
+  }
+
+  // Show authentication pages if not authenticated
+  if (!isAuthenticated) {
+    return showSignUp ? (
+      <SignUp onSwitchToSignIn={() => setShowSignUp(false)} />
+    ) : (
+      <SignIn onSwitchToSignUp={() => setShowSignUp(true)} />
+    );
+  }
+
+  // Show main app if authenticated
   if (error && !isProcessing && !isReady) {
     return (
       <div className="min-h-screen flex items-center justify-center">
@@ -256,7 +289,7 @@ export default function Home() {
   }
 
   return (
-    <div className="flex h-screen">
+    <div className="flex h-screen relative">
       {isReady && sessionId && (
         <Sidebar
           conversations={conversations}
@@ -269,6 +302,19 @@ export default function Home() {
       )}
 
       <div className="flex-1 flex flex-col">
+        {/* Sign Out Button */}
+        {isAuthenticated && (
+          <div className="absolute top-4 right-4 z-50">
+            <button
+              onClick={handleSignOut}
+              className="flex items-center gap-2 px-4 py-2 bg-slate-800/60 hover:bg-slate-700/80 border border-white/10 rounded-lg text-slate-300 hover:text-white transition-all text-sm"
+            >
+              <LogOut className="w-4 h-4" />
+              Sign Out
+            </button>
+          </div>
+        )}
+
         {!isProcessing && !isReady && (
           <RepoInput onSubmit={handleProcessRepo} isProcessing={isProcessing} />
         )}

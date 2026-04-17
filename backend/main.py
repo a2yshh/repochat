@@ -42,6 +42,7 @@ app.add_middleware(
 )
 
 sessions: Dict[str, dict] = {}
+users_db: Dict[str, dict] = {}  # In-memory user store (replace with database in production)
 
 # ---------------- MODELS ----------------
 
@@ -53,11 +54,85 @@ class ChatRequest(BaseModel):
     message: str
     conversation_id: Optional[str] = None
 
+class SignInRequest(BaseModel):
+    email: str
+    password: str
+
+class SignUpRequest(BaseModel):
+    email: str
+    password: str
+
 # ---------------- HEALTH ----------------
 
 @app.get("/health")
 def health_check():
     return {"status": "ok"}
+
+# ---------------- AUTHENTICATION ----------------
+
+@app.post("/api/auth/signup")
+def sign_up(request: SignUpRequest):
+    email = request.email.strip().lower()
+    password = request.password.strip()
+    
+    # Validate input
+    if not email or not password:
+        raise HTTPException(status_code=400, detail="Email and password required")
+    
+    if len(password) < 6:
+        raise HTTPException(status_code=400, detail="Password must be at least 6 characters")
+    
+    if email in users_db:
+        raise HTTPException(status_code=400, detail="Email already registered")
+    
+    # Create user (in production, hash password and use database)
+    user_id = str(uuid.uuid4())
+    users_db[email] = {
+        "id": user_id,
+        "email": email,
+        "password": password,  # In production, use bcrypt or similar
+    }
+    
+    # Generate token (in production, use JWT)
+    token = str(uuid.uuid4())
+    
+    return {
+        "token": token,
+        "user": {
+            "id": user_id,
+            "email": email,
+        },
+    }
+
+@app.post("/api/auth/signin")
+def sign_in(request: SignInRequest):
+    email = request.email.strip().lower()
+    password = request.password.strip()
+    
+    # Validate input
+    if not email or not password:
+        raise HTTPException(status_code=400, detail="Email and password required")
+    
+    # Check user exists
+    if email not in users_db:
+        raise HTTPException(status_code=401, detail="Invalid email or password")
+    
+    user = users_db[email]
+    
+    # Check password (in production, use bcrypt comparison)
+    if user["password"] != password:
+        raise HTTPException(status_code=401, detail="Invalid email or password")
+    
+    # Generate token (in production, use JWT)
+    token = str(uuid.uuid4())
+    
+    return {
+        "token": token,
+        "user": {
+            "id": user["id"],
+            "email": user["email"],
+        },
+    }
 
 @app.get("/api/status/{session_id}")
 def get_status(session_id: str):
